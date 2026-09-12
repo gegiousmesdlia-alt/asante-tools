@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Training Tool — Asante & Grove</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <form class="login-card" id="login-form">
+    <div class="admin-brand">Asante &amp; Grove<small>Training Tool</small></div>
+    <div class="field" style="margin-top:20px;"><label for="a-email">Email</label><input id="a-email" type="email" required></div>
+    <div class="field"><label for="a-pass">Password</label><input id="a-pass" type="password" required></div>
+    <button class="btn" style="width:100%;" type="submit">Sign in</button>
+    <p id="login-error" style="color:var(--rust); font-family:var(--font-mono); font-size:0.78rem; margin-top:12px; display:none;"></p>
+  </form>
+</div>
+
+<!-- MAIN (hidden until authenticated + whitelisted as an admin) -->
+<div id="dashboard" style="display:none;">
+  <header class="admin-header">
+    <div class="admin-brand">Asante &amp; Grove<small>Training Tool</small></div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <span id="signed-in-as" style="font-family:var(--font-mono); font-size:0.78rem; color:var(--muted);"></span>
+      <button class="btn outline small" id="logout-btn">Sign out</button>
+    </div>
+  </header>
+
+  <main class="main" style="max-width:640px; margin:0 auto;">
+    <h1>Customer-Service Training Data</h1>
+    <p style="font-family:var(--font-mono); font-size:0.82rem; color:var(--muted); line-height:1.6; margin-bottom:24px;">
+      This is a separate tool from the admin panel on purpose — it only generates or clears simulated
+      buyer conversations for practicing/evaluating customer-service response speed and quality. Seeded
+      conversations write into the same "messages" data the admin panel's Messages tab reads, so whoever
+      is doing the training exercise replies from there — this tool itself has no inbox view.
+    </p>
+
+    <div class="panel" style="margin-bottom:20px;">
+      <h3 style="margin:0 0 8px; font-family:var(--font-body); font-weight:600; text-transform:none; font-size:1.05rem;">Seed training conversations</h3>
+      <p style="font-family:var(--font-mono); font-size:0.78rem; color:var(--muted); margin:0 0 16px;">
+        Adds ~14 varied simulated buyer inquiries — different phrasing, different scenarios (frustrated
+        customer, skeptical customer, terse one-liners, a rapid double-message, a genuinely complex
+        question, and a full example exchange showing one good way to handle an unverifiable "I already
+        paid" claim). None of these are real accounts, and none assert a payment as settled fact.
+      </p>
+      <button class="btn" id="seed-btn">Seed training conversations</button>
+      <p id="seed-status" style="font-family:var(--font-mono); font-size:0.78rem; margin-top:12px;"></p>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin:0 0 8px; font-family:var(--font-body); font-weight:600; text-transform:none; font-size:1.05rem;">Clear demo conversations</h3>
+      <p style="font-family:var(--font-mono); font-size:0.78rem; color:var(--muted); margin:0 0 16px;">
+        Deletes every conversation this tool created. Run this before real customer traffic starts using
+        the admin panel's Messages tab.
+      </p>
+      <button class="btn danger" id="clear-btn">Clear demo conversations</button>
+      <p id="clear-status" style="font-family:var(--font-mono); font-size:0.78rem; margin-top:12px;"></p>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="js/firebase-config.js"></script>
+<script type="module" src="js/tool.js"></script>
+</body>
+</html>
