@@ -1,0 +1,16 @@
+{
+  "name": "Asante & Grove — Training Tool",
+  "short_name": "Training",
+  "description": "Customer-service training/testing tool for Asante & Grove staff — seeds demo conversations and reviews, and its own inbox to practice replying.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#14171C",
+  "theme_color": "#14171C",
+  "icons": [
+    { "src": "icons/training-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/training-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/training-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
