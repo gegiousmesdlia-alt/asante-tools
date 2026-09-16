@@ -78,3 +78,18 @@ a{ color:inherit; }
 .stars-admin{ color: var(--brass); letter-spacing: 1px; }
 .review-reply-box textarea{ min-height: 80px; }
 .thread-row:hover{ background: var(--panel-2); }
+
+/* Unread-count pills — capped at "9+", matching the admin panel exactly so
+   both apps read the same way at a glance. */
+.badge.count{
+  background: var(--rust); color:#fff; border-color: var(--rust);
+  border-radius: 10px; font-weight:600; min-width: 1.4em; text-align:center;
+}
+.tab-badge{ margin-left:8px; }
+.sidebar button{ display:flex; align-items:center; justify-content:space-between; }
+.seed-count-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+.seed-count-row .field{ margin-bottom:0; max-width:120px; }
+.pool-status{ font-family:var(--font-mono); font-size:0.76rem; color:var(--muted); margin:8px 0 16px; }
+.pool-status strong{ color: var(--parchment); }
+.upload-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px; }
+.upload-row input[type="file"]{ font-family:var(--font-mono); font-size:0.76rem; color:var(--muted); }

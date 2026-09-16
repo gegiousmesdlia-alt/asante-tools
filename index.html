@@ -30,37 +30,15 @@
     </div>
   </header>
 
-  <main class="main" style="max-width:640px; margin:0 auto;">
-    <h1>Customer-Service Training Data</h1>
-    <p style="font-family:var(--font-mono); font-size:0.82rem; color:var(--muted); line-height:1.6; margin-bottom:24px;">
-      This is a separate tool from the admin panel on purpose — it only generates or clears simulated
-      buyer conversations for practicing/evaluating customer-service response speed and quality. Seeded
-      conversations write into the same "messages" data the admin panel's Messages tab reads, so whoever
-      is doing the training exercise replies from there — this tool itself has no inbox view.
-    </p>
-
-    <div class="panel" style="margin-bottom:20px;">
-      <h3 style="margin:0 0 8px; font-family:var(--font-body); font-weight:600; text-transform:none; font-size:1.05rem;">Seed training conversations</h3>
-      <p style="font-family:var(--font-mono); font-size:0.78rem; color:var(--muted); margin:0 0 16px;">
-        Adds ~14 varied simulated buyer inquiries — different phrasing, different scenarios (frustrated
-        customer, skeptical customer, terse one-liners, a rapid double-message, a genuinely complex
-        question, and a full example exchange showing one good way to handle an unverifiable "I already
-        paid" claim). None of these are real accounts, and none assert a payment as settled fact.
-      </p>
-      <button class="btn" id="seed-btn">Seed training conversations</button>
-      <p id="seed-status" style="font-family:var(--font-mono); font-size:0.78rem; margin-top:12px;"></p>
-    </div>
-
-    <div class="panel">
-      <h3 style="margin:0 0 8px; font-family:var(--font-body); font-weight:600; text-transform:none; font-size:1.05rem;">Clear demo conversations</h3>
-      <p style="font-family:var(--font-mono); font-size:0.78rem; color:var(--muted); margin:0 0 16px;">
-        Deletes every conversation this tool created. Run this before real customer traffic starts using
-        the admin panel's Messages tab.
-      </p>
-      <button class="btn danger" id="clear-btn">Clear demo conversations</button>
-      <p id="clear-status" style="font-family:var(--font-mono); font-size:0.78rem; margin-top:12px;"></p>
-    </div>
-  </main>
+  <div class="layout">
+    <nav class="sidebar">
+      <button class="tab-btn active" data-tab="inbox">Inbox<span class="tab-badge badge count" id="inbox-tab-badge" style="display:none;"></span></button>
+      <button class="tab-btn" data-tab="seeding">Seeding</button>
+    </nav>
+    <main class="main" id="main" style="max-width:900px;">
+      <!-- panels injected by tool.js -->
+    </main>
+  </div>
 </div>
 
 <script type="module" src="js/firebase-config.js"></script>
