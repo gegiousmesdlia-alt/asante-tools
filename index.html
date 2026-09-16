@@ -32,15 +32,20 @@
 <!-- MAIN (hidden until authenticated + whitelisted as an admin) -->
 <div id="dashboard" style="display:none;">
   <header class="admin-header">
-    <div class="admin-brand">Asante &amp; Grove<small>Training Tool</small></div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">☰</button>
+      <div class="admin-brand">Asante &amp; Grove<small>Training Tool</small></div>
+    </div>
     <div style="display:flex; align-items:center; gap:16px;">
       <span id="signed-in-as" style="font-family:var(--font-mono); font-size:0.78rem; color:var(--muted);"></span>
+      <button class="btn outline small" id="enable-push-btn">Enable notifications</button>
       <button class="btn outline small" id="logout-btn">Sign out</button>
     </div>
   </header>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
   <div class="layout">
-    <nav class="sidebar">
+    <nav class="sidebar" id="sidebar">
       <button class="tab-btn active" data-tab="inbox">Inbox<span class="tab-badge badge count" id="inbox-tab-badge" style="display:none;"></span></button>
       <button class="tab-btn" data-tab="seeding">Seeding</button>
     </nav>
@@ -54,7 +59,8 @@
 <script type="module" src="js/tool.js"></script>
 <script>
   // Registers the shell-caching service worker (see sw.js) — this is what
-  // makes Chrome/Android offer "Add to Home Screen" / "Install app".
+  // makes Chrome/Android offer "Add to Home Screen" / "Install app", and is
+  // also required before push notifications can be subscribed to.
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
   }

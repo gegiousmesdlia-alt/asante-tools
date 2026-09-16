@@ -87,6 +87,42 @@ a{ color:inherit; }
 }
 .tab-badge{ margin-left:8px; }
 .sidebar button{ display:flex; align-items:center; justify-content:space-between; }
+.panel{ overflow-x:auto; }
+
+/* Two-column message/inbox layout as a real class (not an inline style) so
+   the media query below can collapse it on phones. */
+.msg-layout{ display:grid; grid-template-columns:320px 1fr; gap:20px; align-items:start; }
+
+.typing-indicator{ font-family:var(--font-mono); font-size:0.74rem; color:var(--moss); min-height:1.1em; margin:0 0 8px; }
+
+/* ---------- Phone screens: sidebar becomes an off-canvas drawer ---------- */
+.menu-toggle{
+  display:none; background:none; border:1px solid var(--line); color:var(--parchment);
+  font-family:var(--font-mono); font-size:1rem; line-height:1; padding:9px 13px; cursor:pointer;
+}
+.sidebar-overlay{ display:none; }
+
+@media (max-width: 860px){
+  .layout{ grid-template-columns: 1fr; }
+  .menu-toggle{ display:inline-block; }
+  .admin-brand{ font-size:1.05rem; }
+  .sidebar{
+    position:fixed; top:0; left:0; bottom:0; width:250px; z-index:80;
+    background:var(--ink); overflow-y:auto; padding-top:82px;
+    transform:translateX(-100%); transition:transform 0.2s ease;
+    border-right:1px solid var(--line);
+  }
+  .sidebar.open{ transform:translateX(0); }
+  .sidebar-overlay.open{
+    display:block; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:70;
+  }
+  .main{ padding:18px 14px; }
+  .form-grid{ grid-template-columns:1fr; }
+  .modal-backdrop{ padding:16px; }
+  .modal{ padding:18px; }
+  .msg-layout{ grid-template-columns:1fr; }
+  .toolbar{ flex-wrap:wrap; gap:10px; }
+}
 .seed-count-row{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
 .seed-count-row .field{ margin-bottom:0; max-width:120px; }
 .pool-status{ font-family:var(--font-mono); font-size:0.76rem; color:var(--muted); margin:8px 0 16px; }

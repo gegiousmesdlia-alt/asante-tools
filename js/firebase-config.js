@@ -20,3 +20,13 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// The PUBLIC SITE's deployed URL — this tool is a separate Vercel project
+// with no /api functions of its own, so anything needing a serverless
+// function (fetching the push VAPID public key, saving a push subscription,
+// pinging the admin panel on a new guest reply) calls the public site's
+// domain instead. Keep this in sync with the same constant in the admin
+// panel's firebase-config.js — they should point at the same deployment.
+// TODO: replace with your real public site URL once deployed, e.g.
+// "https://asante-public-site.vercel.app" (no trailing slash).
+export const PUBLIC_SITE_BASE_URL = "https://asante-public-site.vercel.app";

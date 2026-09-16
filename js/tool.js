@@ -1,8 +1,8 @@
-import { auth, db } from "./firebase-config.js";
+import { auth, db, PUBLIC_SITE_BASE_URL } from "./firebase-config.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   collection, addDoc, doc, getDoc, getDocs, query, where, orderBy, limit,
-  serverTimestamp, writeBatch, onSnapshot, updateDoc
+  serverTimestamp, writeBatch, onSnapshot, updateDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const loginScreen = document.getElementById("login-screen");
@@ -30,6 +30,75 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
 
 document.getElementById("logout-btn").addEventListener("click", () => signOut(auth));
 
+// ---------- Phone-screen side drawer ----------
+const sidebarEl = document.getElementById("sidebar");
+const sidebarOverlayEl = document.getElementById("sidebar-overlay");
+function closeDrawer() { sidebarEl.classList.remove("open"); sidebarOverlayEl.classList.remove("open"); }
+document.getElementById("menu-toggle").addEventListener("click", () => {
+  sidebarEl.classList.toggle("open");
+  sidebarOverlayEl.classList.toggle("open");
+});
+sidebarOverlayEl.addEventListener("click", closeDrawer);
+
+// ---------- Push notifications ----------
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+document.getElementById("enable-push-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("enable-push-btn");
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    alert("Push notifications aren't supported in this browser.");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Enabling…";
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") throw new Error("Notification permission was not granted.");
+
+    const keyRes = await fetch(`${PUBLIC_SITE_BASE_URL}/api/vapid-public-key`);
+    const keyData = await keyRes.json();
+    if (!keyRes.ok) throw new Error(keyData.error || "Could not fetch push key");
+
+    const reg = await navigator.serviceWorker.ready;
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(keyData.publicKey)
+    });
+
+    const idToken = await auth.currentUser.getIdToken();
+    const saveRes = await fetch(`${PUBLIC_SITE_BASE_URL}/api/admin/save-push-subscription`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ app: "training", subscription: subscription.toJSON() })
+    });
+    const saveData = await saveRes.json();
+    if (!saveRes.ok) throw new Error(saveData.error || "Could not save subscription");
+
+    btn.textContent = "Notifications on ✓";
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = "Enable notifications";
+    alert("Could not enable notifications: " + err.message);
+  }
+});
+
+// Pings the admin panel's subscribers — fire-and-forget, never blocks or
+// throws on the caller's side (a reply is already saved regardless).
+function notifyAdminPanel(text) {
+  auth.currentUser?.getIdToken().then(idToken => {
+    fetch(`${PUBLIC_SITE_BASE_URL}/api/admin/send-push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ targetApp: "admin", title: "New reply in a demo thread", body: text, url: "./" })
+    }).catch(() => {});
+  }).catch(() => {});
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) { loginScreen.style.display = "flex"; dashboard.style.display = "none"; if (inboxBadgeUnsub) inboxBadgeUnsub(); return; }
   const adminDoc = await getDoc(doc(db, "admins", user.uid));
@@ -51,6 +120,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     renderTab(btn.dataset.tab);
+    closeDrawer();
   });
 });
 
@@ -68,6 +138,8 @@ function renderTab(tab) {
 // ==========================================================================
 let inboxUnsub = null;
 let inboxBadgeUnsub = null;
+let typingUnsub = null;
+let typingListenerThreadId = null;
 
 // Kept alive across tabs so the sidebar badge is accurate even while the
 // Seeding tab is open, not just while Inbox itself is rendered.
@@ -111,7 +183,7 @@ function renderInbox() {
       Plays the guest/buyer side of every seeded demo conversation. Reply from here to practice; the real
       admin replies from the admin panel's Messages tab. Only demo (<span class="badge demo" style="font-size:0.6rem;">DEMO</span>) threads show up here — this is not a general inbox.
     </p>
-    <div style="display:grid; grid-template-columns: 320px 1fr; gap:20px; align-items:start;">
+    <div class="msg-layout">
       <div class="panel" style="padding:0; max-height:70vh; overflow-y:auto;">
         <div id="thread-list"><p style="padding:16px; font-family:var(--font-mono); font-size:0.8rem; color:var(--muted);">Loading…</p></div>
       </div>
@@ -136,7 +208,11 @@ function renderInbox() {
 
     const threads = Object.entries(byThread)
       .map(([id, msgs]) => threadMetaFor(id, msgs))
-      .sort((a, b) => (b.lastAt?.toMillis?.() || 0) - (a.lastAt?.toMillis?.() || 0));
+      .sort((a, b) => {
+        const bUnread = b.unreadCount > 0 ? 1 : 0, aUnread = a.unreadCount > 0 ? 1 : 0;
+        if (bUnread !== aUnread) return bUnread - aUnread; // unread threads first
+        return (b.lastAt?.toMillis?.() || 0) - (a.lastAt?.toMillis?.() || 0); // then most-recent-first
+      });
 
     threadListEl.innerHTML = threads.length ? threads.map(t => `
       <div class="thread-row ${t.threadId === activeThreadId ? "active" : ""}" data-thread="${t.threadId}" style="padding:14px 16px; border-bottom:1px solid var(--line); cursor:pointer; ${t.threadId === activeThreadId ? "background:var(--panel-2);" : ""}">
@@ -185,6 +261,7 @@ function renderInbox() {
             ${m.text}
           </div>`).join("")}
       </div>
+      <p class="typing-indicator" id="typing-indicator"></p>
       <form id="reply-form" style="display:flex; gap:8px;">
         <input id="reply-input" type="text" placeholder="Reply as ${meta.senderName}…" style="flex:1; padding:10px 12px; background:var(--panel-2); border:1px solid var(--line); color:var(--parchment);">
         <button class="btn" type="submit">Send</button>
@@ -193,12 +270,39 @@ function renderInbox() {
     const transcriptEl = document.getElementById("thread-transcript");
     transcriptEl.scrollTop = transcriptEl.scrollHeight;
 
+    // Subscribe to this thread's typing status once per thread — the
+    // inbox listener above re-runs renderThreadDetail on every new message
+    // too, and we don't want a fresh typing listener stacking up each time.
+    if (typingListenerThreadId !== threadId) {
+      if (typingUnsub) typingUnsub();
+      typingListenerThreadId = threadId;
+      typingUnsub = onSnapshot(doc(db, "typingStatus", threadId), (snap) => {
+        const indicatorEl = document.getElementById("typing-indicator");
+        if (!indicatorEl) return; // thread panel has moved on
+        const t = snap.data();
+        const fresh = t?.adminTypingAt && (Date.now() - (t.adminTypingAt.toMillis?.() || 0) < 8000);
+        indicatorEl.textContent = (t?.adminTyping && fresh) ? "Admin is typing…" : "";
+      }, () => {});
+    }
+
+    let typingClearTimeout = null;
+    const replyInput = document.getElementById("reply-input");
+    replyInput.addEventListener("input", () => {
+      setDoc(doc(db, "typingStatus", threadId), { guestTyping: true, guestTypingAt: serverTimestamp() }, { merge: true }).catch(() => {});
+      clearTimeout(typingClearTimeout);
+      typingClearTimeout = setTimeout(() => {
+        setDoc(doc(db, "typingStatus", threadId), { guestTyping: false }, { merge: true }).catch(() => {});
+      }, 3000);
+    });
+
     document.getElementById("reply-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const input = document.getElementById("reply-input");
       const text = input.value.trim();
       if (!text) return;
       input.value = "";
+      clearTimeout(typingClearTimeout);
+      setDoc(doc(db, "typingStatus", threadId), { guestTyping: false }, { merge: true }).catch(() => {});
       await addDoc(collection(db, "messages"), {
         threadId,
         kind: meta.kind,
@@ -214,6 +318,7 @@ function renderInbox() {
         read: false,
         readByGuest: true
       });
+      notifyAdminPanel(`${meta.senderName}: ${text}`);
     });
   }
 }

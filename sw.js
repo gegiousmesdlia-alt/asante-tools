@@ -49,3 +49,33 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(event.request))
   );
 });
+
+// ---------- Push notifications ----------
+// The payload is whatever JSON api/admin/send-push.js sent: { title, body, url }.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Asante & Grove — Training Tool", {
+      body: data.body || "You have a new message.",
+      icon: "icons/training-192.png",
+      badge: "icons/training-192.png",
+      data: { url: data.url || "./" }
+    })
+  );
+});
+
+// Focuses an already-open tab if there is one, otherwise opens a new one —
+// standard "resume the app, don't stack duplicate tabs" behavior.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || "./", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === targetUrl && "focus" in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
+});
