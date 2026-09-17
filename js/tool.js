@@ -206,11 +206,11 @@ function renderInbox() {
       Plays the guest/buyer side of every seeded demo conversation. Reply from here to practice; the real
       admin replies from the admin panel's Messages tab. Only demo (<span class="badge demo" style="font-size:0.6rem;">DEMO</span>) threads show up here — this is not a general inbox.
     </p>
-    <div class="msg-layout">
-      <div class="panel" style="padding:0; max-height:70vh; overflow-y:auto;">
+    <div class="msg-layout" id="msg-layout">
+      <div class="panel thread-list-panel" style="padding:0; max-height:70vh; overflow-y:auto;">
         <div id="thread-list"><p style="padding:16px; font-family:var(--font-mono); font-size:0.8rem; color:var(--muted);">Loading…</p></div>
       </div>
-      <div class="panel" id="thread-detail" style="min-height:300px;">
+      <div class="panel thread-detail-panel" id="thread-detail" style="min-height:300px;">
         <p style="font-family:var(--font-mono); font-size:0.85rem; color:var(--muted);">Select a conversation to view it.</p>
       </div>
     </div>`;
@@ -268,6 +268,7 @@ function renderInbox() {
     activeThreadId = threadId;
     document.querySelectorAll(".thread-row").forEach(r => r.classList.toggle("active", r.dataset.thread === threadId));
     renderThreadDetail(threadId, msgs);
+    document.getElementById("msg-layout")?.classList.add("detail-open");
     // mark the admin's replies as seen by the guest side
     msgs.filter(m => m.senderType === "admin" && !m.readByGuest).forEach(m => updateDoc(doc(db, "messages", m.id), { readByGuest: true }).catch(() => {}));
   }
@@ -276,6 +277,7 @@ function renderInbox() {
     const detail = document.getElementById("thread-detail");
     const meta = threadMetaFor(threadId, msgs);
     detail.innerHTML = `
+      <button type="button" class="btn outline small thread-back-btn" id="thread-back-btn">← Back</button>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <div>
           <h3 style="text-transform:none; font-family:var(--font-body); font-size:1.05rem; margin:0;">${meta.senderName} <span class="badge demo" style="font-size:0.6rem; margin-left:6px;">DEMO</span></h3>
@@ -284,7 +286,7 @@ function renderInbox() {
       </div>
       <div id="thread-transcript" style="max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
         ${msgs.map(m => `
-          <div style="align-self:${m.senderType === "admin" ? "flex-end" : "flex-start"}; max-width:80%; padding:9px 12px; font-size:0.87rem; background:${m.senderType === "admin" ? "var(--brass)" : "var(--panel-2)"}; color:${m.senderType === "admin" ? "var(--ink)" : "var(--parchment)"};">
+          <div style="align-self:${m.senderType === "admin" ? "flex-start" : "flex-end"}; max-width:80%; padding:9px 12px; font-size:0.87rem; background:${m.senderType === "admin" ? "var(--panel-2)" : "var(--brass)"}; color:${m.senderType === "admin" ? "var(--parchment)" : "var(--ink)"};">
             ${m.text}
           </div>`).join("")}
       </div>
@@ -296,6 +298,10 @@ function renderInbox() {
 
     const transcriptEl = document.getElementById("thread-transcript");
     transcriptEl.scrollTop = transcriptEl.scrollHeight;
+
+    document.getElementById("thread-back-btn").addEventListener("click", () => {
+      document.getElementById("msg-layout")?.classList.remove("detail-open");
+    });
 
     // Subscribe to this thread's typing status once per thread — the
     // inbox listener above re-runs renderThreadDetail on every new message
