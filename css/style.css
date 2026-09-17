@@ -15,9 +15,11 @@
   --font-mono: 'IBM Plex Mono', monospace;
 }
 *{ box-sizing:border-box; }
+html{ touch-action: manipulation; }
 body{
   margin:0; background: var(--ink); color: var(--parchment);
   font-family: var(--font-body); line-height:1.5;
+  touch-action: manipulation;
 }
 a{ color:inherit; }
 .wrap{ max-width: 1240px; margin:0 auto; padding: 0 26px; }

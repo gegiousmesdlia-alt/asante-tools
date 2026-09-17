@@ -65,15 +65,19 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Focuses an already-open tab if there is one, otherwise opens a new one —
-// standard "resume the app, don't stack duplicate tabs" behavior.
+// Opens (or reuses) a window and takes it straight to the deep-linked
+// tab/thread from the notification — not just the app's home screen.
+// Reuses an already-open tab via navigate() when one exists (avoids
+// stacking duplicate tabs); otherwise opens a fresh one.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = new URL(event.notification.data?.url || "./", self.location.origin).href;
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url === targetUrl && "focus" in client) return client.focus();
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clientList) => {
+      const existing = clientList.find(c => new URL(c.url).origin === self.location.origin);
+      if (existing) {
+        if ("navigate" in existing) await existing.navigate(targetUrl).catch(() => {});
+        return existing.focus();
       }
       if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })

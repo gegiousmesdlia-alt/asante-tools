@@ -54,6 +54,10 @@ document.getElementById("enable-push-btn").addEventListener("click", async () =>
     alert("Push notifications aren't supported in this browser.");
     return;
   }
+  if (Notification.permission === "denied") {
+    alert("Notifications were previously blocked for this app. Browsers won't re-prompt once blocked — re-enable them from your browser/OS notification settings for this app, then try again.");
+    return;
+  }
   btn.disabled = true;
   btn.textContent = "Enabling…";
   try {
@@ -81,6 +85,7 @@ document.getElementById("enable-push-btn").addEventListener("click", async () =>
 
     btn.textContent = "Notifications on ✓";
   } catch (err) {
+    console.error("Enable notifications failed:", err);
     btn.disabled = false;
     btn.textContent = "Enable notifications";
     alert("Could not enable notifications: " + err.message);
@@ -89,14 +94,19 @@ document.getElementById("enable-push-btn").addEventListener("click", async () =>
 
 // Pings the admin panel's subscribers — fire-and-forget, never blocks or
 // throws on the caller's side (a reply is already saved regardless).
-function notifyAdminPanel(text) {
+function notifyAdminPanel(text, threadId) {
   auth.currentUser?.getIdToken().then(idToken => {
     fetch(`${PUBLIC_SITE_BASE_URL}/api/admin/send-push`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-      body: JSON.stringify({ targetApp: "admin", title: "New reply in a demo thread", body: text, url: "./" })
-    }).catch(() => {});
-  }).catch(() => {});
+      body: JSON.stringify({
+        targetApp: "admin",
+        title: "New reply in a demo thread",
+        body: text,
+        url: `./?tab=messages&thread=${encodeURIComponent(threadId)}`
+      })
+    }).catch(err => console.error("notifyAdminPanel failed:", err));
+  }).catch(err => console.error("notifyAdminPanel failed:", err));
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -112,7 +122,19 @@ onAuthStateChanged(auth, async (user) => {
   dashboard.style.display = "block";
   document.getElementById("signed-in-as").textContent = `Signed in as: ${user.email}`;
   watchInboxBadge();
-  renderTab("inbox");
+
+  // A push notification opened this page with ?tab=inbox&thread=... (see
+  // notificationclick in sw.js) — jump straight to that conversation.
+  const deepLinkParams = new URLSearchParams(location.search);
+  const deepLinkTab = deepLinkParams.get("tab");
+  const deepLinkThread = deepLinkParams.get("thread");
+  history.replaceState({}, "", location.pathname); // don't re-trigger this on a plain refresh
+
+  const startTab = deepLinkTab === "seeding" ? "seeding" : "inbox";
+  if (startTab === "inbox" && deepLinkThread) pendingDeepLinkThreadId = deepLinkThread;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(`.tab-btn[data-tab="${startTab}"]`)?.classList.add("active");
+  renderTab(startTab);
 });
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -140,6 +162,7 @@ let inboxUnsub = null;
 let inboxBadgeUnsub = null;
 let typingUnsub = null;
 let typingListenerThreadId = null;
+let pendingDeepLinkThreadId = null; // set from a push notification's ?thread= param
 
 // Kept alive across tabs so the sidebar badge is accurate even while the
 // Seeding tab is open, not just while Inbox itself is rendered.
@@ -234,6 +257,10 @@ function renderInbox() {
 
     if (activeThreadId && byThread[activeThreadId]) {
       renderThreadDetail(activeThreadId, byThread[activeThreadId]);
+    } else if (pendingDeepLinkThreadId && byThread[pendingDeepLinkThreadId]) {
+      const target = pendingDeepLinkThreadId;
+      pendingDeepLinkThreadId = null;
+      openThread(target, byThread[target]);
     }
   });
 
@@ -318,7 +345,7 @@ function renderInbox() {
         read: false,
         readByGuest: true
       });
-      notifyAdminPanel(`${meta.senderName}: ${text}`);
+      notifyAdminPanel(`${meta.senderName}: ${text}`, threadId);
     });
   }
 }
